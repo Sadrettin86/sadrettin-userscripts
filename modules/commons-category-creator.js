@@ -5,14 +5,22 @@
  *
  * Yaptığı iş:
  *  Item'da Commons sitelink VE P373 ikisi birden YOKSA, başlığa
- *  "Commons kategori oluştur" butonu ekler. Tıklanınca:
+ *  [Commons | +kategori] rozetini ekler. Tıklanınca:
  *    1) Item'ın EN/TR etiketini önerir, kullanıcı düzenleyebilir.
  *    2) Commons'ta o adda kategori oluşturur ({{Wikidata Infobox}} ile).
  *    3) Item'a Commons sitelink ekler.
  *    4) P373 (Commons category) ifadesini ekler/günceller.
+ *
+ * Bağımlılık: core.js (SUS.addBadge)
  */
 
 mw.loader.using(['mediawiki.api', 'mediawiki.ForeignApi'], function () {
+    var SUS = window.SUS;
+    if (!SUS) {
+        console.error('commons-category-creator.js: core.js (window.SUS) yüklenmemiş.');
+        return;
+    }
+
     if (mw.config.get('wgNamespaceNumber') !== 0) return;
 
     var qid = mw.config.get('wbEntityId');
@@ -22,17 +30,20 @@ mw.loader.using(['mediawiki.api', 'mediawiki.ForeignApi'], function () {
     var hasP373 = document.querySelector('.wikibase-statementgroup[data-property-id="P373"]');
     if (hasCommonsLink && hasP373) return;
 
-    var idSpan = document.querySelector('#firstHeading .wikibase-title-id');
-    if (!idSpan) return;
+    var $heading = SUS.getHeadingElement();
+    if (!$heading.length) return;
 
-    var btn = document.createElement('button');
-    btn.textContent = 'Commons kategori oluştur';
-    btn.className = 'commons-button commons-create-category-button';
-    idSpan.appendChild(btn);
+    var $badge = SUS.addBadge($heading, {
+        label: 'Commons', value: '+kategori', variant: 'cat-create',
+        title: 'Commons kategorisi oluştur, sitelink ekle ve P373 set et',
+        onClick: function () { run($(this)); }
+    });
 
-    btn.addEventListener('click', function () {
-        btn.disabled = true;
-        btn.textContent = 'İşleniyor…';
+    function setStatus($b, text) { $b.find('.sb-value').text(text); }
+
+    function run($b) {
+        $b.prop('disabled', true);
+        setStatus($b, 'işleniyor…');
 
         var api = new mw.Api();
         var commonsApi = new mw.ForeignApi('https://commons.wikimedia.org/w/api.php', { anonymous: false });
@@ -74,9 +85,7 @@ mw.loader.using(['mediawiki.api', 'mediawiki.ForeignApi'], function () {
                     linksite: 'commonswiki',
                     linktitle: 'Category:' + categoryName,
                     summary: 'Add Commons category sitelink'
-                }).then(function () {
-                    return { categoryName: categoryName };
-                });
+                }).then(function () { return { categoryName: categoryName }; });
             });
         }).then(function (ctx) {
             var categoryName = ctx.categoryName;
@@ -108,12 +117,14 @@ mw.loader.using(['mediawiki.api', 'mediawiki.ForeignApi'], function () {
                 });
             });
         }).then(function () {
-            btn.textContent = 'Tamamlandı';
+            setStatus($b, 'tamam');
+            $b.addClass('is-success');
             setTimeout(function () { location.reload(); }, 800);
         }).catch(function (err) {
-            btn.textContent = 'Hata: ' + ((err && (err.info || (err.error && err.error.info))) || err);
+            setStatus($b, 'hata');
+            $b.addClass('is-error');
             console.error(err);
-            btn.disabled = false;
+            $b.prop('disabled', false);
         });
-    });
+    }
 });

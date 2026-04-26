@@ -1,38 +1,39 @@
 /**
  * sadrettin-userscripts — kullanıcı common.js girişi
  *
- * Bu dosya tüm modülleri Wikipedia üzerinden yükler.
- * Modülleri ilgili User: sayfalarına yüklediyseniz, aşağıdaki
- * URL'leri kendi kullanıcı adınıza göre güncelleyin.
+ * Bu dosya tüm modülleri Wikipedia/meta üzerinden yükler. Modüller
+ * meta.wikimedia.org User: sayfalarına yüklenmiştir; oradan tek bir
+ * `mw.loader.load()` çağrısıyla her wiki'de erişilebilir hale gelir.
  *
- * Her modül kendi içinde namespace/site kontrolü yaptığı için,
- * yanlış sitede çalışmazlar — hepsini her yerden yüklemek güvenlidir.
+ * NOT: Modüller core.js'in yüklenmiş olmasını bekler. mw.loader.load()
+ * paralel yüklediği için core.js'i $.getScript ile sıralı yüklüyoruz.
+ *
+ * Deploy etmek için:  ./scripts/deploy.sh  (DEPLOY.md dosyasına bakın)
  */
 
 (function () {
+    var BASE = 'https://meta.wikimedia.org/w/index.php?title=User:Sadrettin/';
+    var SUFFIX = '&action=raw&ctype=text/javascript';
+
     var modules = [
-        // Heading'e harita/araştırma butonları (KE, OSM, Maps, Earth, Yandex, WSM, Google, WLM, Q-kopyala)
-        'https://meta.wikimedia.org/w/index.php?title=User:Sadrettin/heading-buttons.js&action=raw&ctype=text/javascript',
-
-        // P373 (Commons category) ekleme + Commons sitelink ("iw") ekleme butonları (Wikidata)
-        'https://meta.wikimedia.org/w/index.php?title=User:Sadrettin/p373-helper.js&action=raw&ctype=text/javascript',
-
-        // P527 (has parts) → P361 (part of) toplu yansıtma butonu (Wikidata)
-        'https://meta.wikimedia.org/w/index.php?title=User:Sadrettin/p527-to-p361.js&action=raw&ctype=text/javascript',
-
-        // Commons kategorisini Wikidata'dan tek tıkla oluştur (kategori + sitelink + P373)
-        'https://meta.wikimedia.org/w/index.php?title=User:Sadrettin/commons-category-creator.js&action=raw&ctype=text/javascript',
-
-        // Commons kategori sayfasında {{Wikidata Infobox}} / Duplicity buton
-        'https://commons.wikimedia.org/w/index.php?title=User:Sadrettin/commons-infobox.js&action=raw&ctype=text/javascript',
-
-        // Commons kategorideki tüm dosyalara P180 (depicts) toplu ekleme
-        'https://commons.wikimedia.org/w/index.php?title=User:Sadrettin/commons-p180-bulk.js&action=raw&ctype=text/javascript',
-
-        // Eski/harici scriptler
-        'https://meta.wikimedia.org/w/index.php?title=User:Sadrettin/WLMTurkeyp373checkerandcreator.js&action=raw&ctype=text/javascript',
-        'https://commons.wikimedia.org/w/index.php?title=User:Sadrettin/WikidataImageAdder.js&action=raw&ctype=text/javascript'
+        'heading-buttons.js',
+        'p373-helper.js',
+        'p527-to-p361.js',
+        'commons-category-creator.js',
+        'commons-infobox.js',
+        'commons-p180-bulk.js'
     ];
 
-    modules.forEach(function (url) { mw.loader.load(url); });
+    // Önce core.js, sonra modülleri yükle (sıralı)
+    $.getScript(BASE + 'core.js' + SUFFIX).done(function () {
+        modules.forEach(function (name) {
+            mw.loader.load(BASE + name + SUFFIX);
+        });
+    }).fail(function () {
+        console.error('sadrettin-userscripts: core.js yüklenemedi.');
+    });
+
+    // Eski/harici scriptler
+    mw.loader.load('https://meta.wikimedia.org/w/index.php?title=User:Sadrettin/WLMTurkeyp373checkerandcreator.js&action=raw&ctype=text/javascript');
+    mw.loader.load('https://commons.wikimedia.org/w/index.php?title=User:Sadrettin/WikidataImageAdder.js&action=raw&ctype=text/javascript');
 })();

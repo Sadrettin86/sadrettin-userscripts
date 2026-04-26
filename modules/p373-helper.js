@@ -5,42 +5,30 @@
  *
  * Yaptığı işler:
  *  - Commons sitelink VAR ama P373 (Commons category) YOK ise:
- *      "P373 ekle" butonu çıkar.
+ *      [Wikidata | +P373] rozetini çıkarır.
  *  - P373 VAR ama Commons sitelink YOK ise:
- *      "iw ekle" butonu çıkar (P373 değerini sitelink olarak ekler).
+ *      [Sitelink | +iw] rozetini çıkarır.
+ *
+ * Bağımlılık: core.js
  */
 
 $(document).ready(function () {
+    var SUS = window.SUS;
+    if (!SUS) {
+        console.error('p373-helper.js: core.js (window.SUS) yüklenmemiş.');
+        return;
+    }
 
     if (mw.config.get('wgNamespaceNumber') !== 0 ||
         !mw.config.get('wgTitle').match(/^Q\d+$/)) {
         return;
     }
 
-    function getEntityId() {
-        var fromWiki = mw.config.get('wgWikibaseItemId');
-        if (fromWiki) return fromWiki;
-        var fromWD = mw.config.get('wgTitle');
-        if (/^Q\d+$/.test(fromWD)) return fromWD;
-        return null;
-    }
-
-    function getHeadingElement() {
-        var $heading = $('#firstHeading');
-        if (!$heading.length) {
-            $heading = $('h1.wikibase-titlepage-heading');
-        }
-        return $heading;
-    }
-
-    var WikidataCommonsHelper = {
+    var Helper = {
 
         getP373Value: function () {
-            var p373Element = $('.wikibase-statementgroupview[data-property-id="P373"] .wikibase-snakview-value');
-            if (p373Element.length > 0) {
-                return p373Element.first().text().trim();
-            }
-            return null;
+            var $el = $('.wikibase-statementgroupview[data-property-id="P373"] .wikibase-snakview-value');
+            return $el.length > 0 ? $el.first().text().trim() : null;
         },
 
         hasCommonsCategory: function () {
@@ -52,62 +40,14 @@ $(document).ready(function () {
         },
 
         getCommonsCategory: function () {
-            var commonsLink = $('.wikibase-sitelinklistview a[href*="commons.wikimedia.org/wiki/Category:"]');
-            if (commonsLink.length === 0) return null;
-
-            var href = commonsLink.attr('href');
-            var match = href.match(/\/wiki\/Category:(.+)$/);
-            if (match) {
-                return decodeURIComponent(match[1]).replace(/_/g, ' ');
-            }
-            return null;
-        },
-
-        addHeadingButtons: function ($heading) {
-            var hasP373 = this.hasCommonsCategory();
-            var p373Value = this.getP373Value();
-            var hasCommonsSitelink = this.hasCommonsSitelink();
-            var commonsCategory = this.getCommonsCategory();
-
-            if (!hasP373 && commonsCategory) {
-                this.addP373Button($heading, commonsCategory);
-            }
-            if (hasP373 && p373Value && !hasCommonsSitelink) {
-                this.addSitelinkButton($heading, p373Value);
-            }
-        },
-
-        addP373Button: function ($heading, categoryName) {
-            var $button = $('<a>')
-                .addClass('commons-helper-button p373-button')
-                .text('P373 ekle')
-                .attr('title', 'Commons kategorisini P373\'e ekle: ' + categoryName)
-                .click(function (e) {
-                    e.preventDefault();
-                    WikidataCommonsHelper.addCategoryToP373(categoryName);
-                });
-            $heading.append($button);
-        },
-
-        addSitelinkButton: function ($heading, categoryName) {
-            var $button = $('<a>')
-                .addClass('commons-helper-button iw-button')
-                .text('iw ekle')
-                .attr('title', 'P373\'teki kategoriyi Commons sitelink olarak ekle: Category:' + categoryName)
-                .click(function (e) {
-                    e.preventDefault();
-                    var fullCategoryName = categoryName.startsWith('Category:') ? categoryName : 'Category:' + categoryName;
-                    var message = 'P373\'teki "' + categoryName + '" kategorisi Commons sitelink olarak "' + fullCategoryName + '" şeklinde eklensin mi?';
-                    if (confirm(message)) {
-                        WikidataCommonsHelper.addCommonsToSitelinks(categoryName);
-                    }
-                });
-            $heading.append($button);
+            var $link = $('.wikibase-sitelinklistview a[href*="commons.wikimedia.org/wiki/Category:"]');
+            if ($link.length === 0) return null;
+            var match = $link.attr('href').match(/\/wiki\/Category:(.+)$/);
+            return match ? decodeURIComponent(match[1]).replace(/_/g, ' ') : null;
         },
 
         addCategoryToP373: function (categoryName) {
             var entityId = mw.config.get('wgTitle');
-
             mw.notify('Commons kategorisi P373\'e ekleniyor...', { type: 'info' });
 
             new mw.Api().postWithToken('csrf', {
@@ -125,14 +65,13 @@ $(document).ready(function () {
                     mw.notify('Hata oluştu: ' + JSON.stringify(data), { type: 'error' });
                 }
             }).fail(function (code, data) {
-                WikidataCommonsHelper.handleApiError('P373 ekleme', code, data);
+                Helper.handleApiError('P373 ekleme', code, data);
             });
         },
 
         addCommonsToSitelinks: function (categoryName) {
             var entityId = mw.config.get('wgTitle');
             var fullCategoryName = categoryName.startsWith('Category:') ? categoryName : 'Category:' + categoryName;
-
             mw.notify('Commons sitelink ekleniyor...', { type: 'info' });
 
             new mw.Api().postWithToken('csrf', {
@@ -149,7 +88,7 @@ $(document).ready(function () {
                     mw.notify('Hata oluştu: ' + JSON.stringify(data), { type: 'error' });
                 }
             }).fail(function (code, data) {
-                WikidataCommonsHelper.handleApiError('Commons sitelink ekleme', code, data);
+                Helper.handleApiError('Commons sitelink ekleme', code, data);
             });
         },
 
@@ -163,23 +102,46 @@ $(document).ready(function () {
         },
 
         init: function () {
-            var entityId = getEntityId();
+            var entityId = SUS.getEntityId();
             if (!entityId) return;
 
-            var $heading = getHeadingElement();
+            var $heading = SUS.getHeadingElement();
             if (!$heading.length) return;
 
-            this.addHeadingButtons($heading);
+            var hasP373 = this.hasCommonsCategory();
+            var p373Value = this.getP373Value();
+            var hasSitelink = this.hasCommonsSitelink();
+            var commonsCategory = this.getCommonsCategory();
+
+            if (!hasP373 && commonsCategory) {
+                SUS.addBadge($heading, {
+                    label: 'Wikidata', value: '+P373', variant: 'p373',
+                    title: 'Commons kategorisini P373\'e ekle: ' + commonsCategory,
+                    onClick: function () {
+                        Helper.addCategoryToP373(commonsCategory);
+                    }
+                });
+            }
+
+            if (hasP373 && p373Value && !hasSitelink) {
+                SUS.addBadge($heading, {
+                    label: 'Sitelink', value: '+iw', variant: 'iw',
+                    title: 'P373\'teki kategoriyi Commons sitelink olarak ekle: Category:' + p373Value,
+                    onClick: function () {
+                        var fullName = p373Value.startsWith('Category:') ? p373Value : 'Category:' + p373Value;
+                        var msg = 'P373\'teki "' + p373Value + '" kategorisi Commons sitelink olarak "' + fullName + '" şeklinde eklensin mi?';
+                        if (confirm(msg)) {
+                            Helper.addCommonsToSitelinks(p373Value);
+                        }
+                    }
+                });
+            }
         }
     };
 
     mw.hook('wikibase.entityPage.entityLoaded').add(function () {
-        setTimeout(function () { WikidataCommonsHelper.init(); }, 500);
+        setTimeout(function () { Helper.init(); }, 500);
     });
 
-    $(window).on('load', function () {
-        setTimeout(function () { WikidataCommonsHelper.init(); }, 1000);
-    });
-
-    window.WikidataCommonsHelper = WikidataCommonsHelper;
+    window.WikidataCommonsHelper = Helper;
 });

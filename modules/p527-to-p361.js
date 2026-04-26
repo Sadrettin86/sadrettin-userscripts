@@ -6,10 +6,18 @@
  * Yaptığı iş:
  *  Açık olan item P527 (şun(lar)dan oluşur / has parts) içeriyorsa,
  *  bu listedeki her hedef öğenin sayfasına geri-yönlü P361 (parçası / part of)
- *  ifadesi olarak mevcut item'i ekler. P527 grubunun yanında bir buton çıkar.
+ *  ifadesi olarak mevcut item'i ekler. P527 grubunun yanında
+ *  [P527→P361 | yansıt] rozeti çıkar.
+ *
+ * Bağımlılık: core.js (SUS.addBadge, SUS.sleep)
  */
 
 $(document).ready(function () {
+    var SUS = window.SUS;
+    if (!SUS) {
+        console.error('p527-to-p361.js: core.js (window.SUS) yüklenmemiş.');
+        return;
+    }
 
     if (mw.config.get('wgNamespaceNumber') !== 0 ||
         !mw.config.get('wgPageName').startsWith('Q')) {
@@ -24,19 +32,11 @@ $(document).ready(function () {
         $('.wikibase-statementgroupview').each(function () {
             var $this = $(this);
             if ($this.attr('data-property-id') === 'P527') {
-                found = $this;
-                return false;
+                found = $this; return false;
             }
-            var $propLink = $this.find('.wikibase-statementgroupview-property .wikibase-statementgroupview-property-label a');
-            var href = $propLink.attr('href') || '';
+            var href = $this.find('.wikibase-statementgroupview-property-label a').attr('href') || '';
             if (href.includes('P527') || href.endsWith('P527')) {
-                found = $this;
-                return false;
-            }
-            var labelText = $this.find('.wikibase-statementgroupview-property-label').text().trim().toLowerCase();
-            if (labelText === 'şun(lar)dan oluşur' || labelText === 'has part' || labelText === 'has parts') {
-                found = $this;
-                return false;
+                found = $this; return false;
             }
         });
         return found;
@@ -63,16 +63,11 @@ $(document).ready(function () {
         }
         if (qids.length === 0) {
             $group.find('a[href]').each(function () {
-                var href = $(this).attr('href');
-                var match = href.match(/\/Q(\d+)$/);
+                var match = ($(this).attr('href') || '').match(/\/Q(\d+)$/);
                 if (match) qids.push('Q' + match[1]);
             });
         }
         return qids;
-    }
-
-    function sleep(ms) {
-        return new Promise(function (resolve) { setTimeout(resolve, ms); });
     }
 
     function addP361Claim(targetQid, currentQid) {
@@ -84,11 +79,10 @@ $(document).ready(function () {
                 format: 'json'
             }).done(function (data) {
                 if (data.claims && data.claims.P361) {
-                    var existingValues = data.claims.P361.map(function (claim) {
-                        return claim.mainsnak && claim.mainsnak.datavalue && claim.mainsnak.datavalue.value
-                            ? claim.mainsnak.datavalue.value.id : null;
+                    var existingValues = data.claims.P361.map(function (c) {
+                        return c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value
+                            ? c.mainsnak.datavalue.value.id : null;
                     }).filter(Boolean);
-
                     if (existingValues.indexOf(currentQid) !== -1) {
                         resolve({ success: true, existing: true });
                         return;
@@ -103,11 +97,9 @@ $(document).ready(function () {
                     value: JSON.stringify({ 'entity-type': 'item', 'id': currentQid }),
                     format: 'json'
                 }).done(function (result) {
-                    if (result.success) {
-                        resolve({ success: true, existing: false });
-                    } else {
-                        resolve({ success: false, error: result.error || 'Bilinmeyen hata' });
-                    }
+                    resolve(result.success
+                        ? { success: true, existing: false }
+                        : { success: false, error: result.error || 'Bilinmeyen hata' });
                 }).fail(function (error) {
                     resolve({ success: false, error: error });
                 });
@@ -117,77 +109,76 @@ $(document).ready(function () {
         });
     }
 
-    async function processP527Values($group, $button) {
-        $button.prop('disabled', true).text('İşleniyor...').css('background-color', '#ccc');
+    function setStatus($badge, text) { $badge.find('.sb-value').text(text); }
+
+    async function processP527Values($group, $badge) {
+        $badge.prop('disabled', true).addClass('is-processing');
+        setStatus($badge, 'işleniyor…');
 
         try {
             var currentQid = mw.config.get('wgPageName');
             var qids = collectQids($group);
 
-            if (qids.length === 0) {
-                throw new Error('P527\'de QID bulunamadı');
-            }
+            if (qids.length === 0) throw new Error('P527\'de QID bulunamadı');
 
-            var successCount = 0, errorCount = 0, existingCount = 0;
+            var success = 0, errors = 0, existing = 0;
 
             for (var i = 0; i < qids.length; i++) {
-                var targetQid = qids[i];
-                $button.text('İşleniyor... (' + (i + 1) + '/' + qids.length + ')');
-
+                setStatus($badge, (i + 1) + '/' + qids.length);
                 try {
-                    var result = await addP361Claim(targetQid, currentQid);
+                    var result = await addP361Claim(qids[i], currentQid);
                     if (result.success) {
-                        if (result.existing) existingCount++;
-                        else successCount++;
+                        if (result.existing) existing++;
+                        else success++;
                     } else {
-                        errorCount++;
+                        errors++;
                     }
-                } catch (error) {
-                    errorCount++;
+                } catch (e) {
+                    errors++;
                 }
-
-                if (i < qids.length - 1) await sleep(1500);
+                if (i < qids.length - 1) await SUS.sleep(1500);
             }
 
-            var resultText = 'Tamamlandı: ' + successCount + ' eklendi';
-            if (existingCount > 0) resultText += ', ' + existingCount + ' zaten vardı';
-            if (errorCount > 0) resultText += ', ' + errorCount + ' hata';
-
-            $button.text(resultText).css('background-color', successCount > 0 ? '#00af89' : '#d33');
+            $badge.removeClass('is-processing').addClass(errors === 0 ? 'is-success' : 'is-error');
+            setStatus($badge, success + '+' + existing + (errors ? '/' + errors + 'hata' : ''));
         } catch (error) {
-            $button.text('Hata oluştu: ' + error.message).css('background-color', '#d33');
+            $badge.removeClass('is-processing').addClass('is-error');
+            setStatus($badge, 'hata');
+            console.error(error);
         }
 
         setTimeout(function () {
-            $button.prop('disabled', false)
-                   .text('Bu Qid\'yi ögelere ekle')
-                   .css('background-color', '#0645ad');
+            $badge.prop('disabled', false)
+                  .removeClass('is-processing is-success is-error');
+            setStatus($badge, 'yansıt');
         }, 4000);
     }
 
     function addP527Button() {
-        var $p527Group = findP527Group();
-        if (!isReallyP527($p527Group)) return;
-        if ($p527Group.find('.p527-auto-button').length > 0) return;
+        var $group = findP527Group();
+        if (!isReallyP527($group)) return;
+        if ($group.find('.sb-p527').length > 0) return;
 
-        var $button = $('<button>')
-            .addClass('p527-auto-button')
-            .text('Bu Qid\'yi ögelere ekle')
-            .click(function () {
-                processP527Values($p527Group, $button);
-            });
+        var $wrap = $('<div class="p527-button-wrap">');
+        SUS.addBadge($wrap, {
+            label: 'P527→P361', value: 'yansıt', variant: 'p527',
+            title: 'Bu öğeyi P527 listesindeki tüm hedeflere P361 olarak ekle',
+            onClick: function () {
+                processP527Values($group, $(this));
+            }
+        });
 
-        var $propertyContainer = $p527Group.find('.wikibase-statementgroupview-property');
+        var $propertyContainer = $group.find('.wikibase-statementgroupview-property');
         if ($propertyContainer.length > 0) {
-            $propertyContainer.append($('<div>').addClass('p527-button-wrap').append($button));
+            $propertyContainer.append($wrap);
             return;
         }
-        var $listView = $p527Group.find('.wikibase-statementlistview');
+        var $listView = $group.find('.wikibase-statementlistview');
         if ($listView.length > 0) {
-            $listView.before($('<div>').addClass('p527-button-wrap').append($button));
+            $listView.before($wrap);
             return;
         }
-        $p527Group.prepend($('<div>').addClass('p527-button-wrap p527-fallback').append($button));
+        $group.prepend($wrap);
     }
 
     mw.hook('wikibase.entityPage.entityLoaded').add(function () {

@@ -8,112 +8,94 @@
  *   www.wikidata.org/wiki/User:Username/common.css
  */
 
-/* === Heading butonları (ortak temel) === */
-.button-container,
-.wikidata-button,
-.copy-button,
-.ke-button,
-.osm-button,
-.commons-button,
-.ibb-button,
-.commons-helper-button,
-.wsm-button {
-    display: inline-block;
-    vertical-align: middle;
-    font-family: Arial, sans-serif;
-    font-size: 12px;
-    line-height: 1.4;
-    padding: 4px 8px;
-    margin-left: 8px;
+
+/* ============================================================ *
+ *  Shields.io tarzı iki-tonlu rozetler (.sb-badge)
+ * ============================================================ */
+
+.sb-badge {
+    display: inline-flex;
+    align-items: stretch;
+    margin-left: 6px;
+    height: 20px;
     border-radius: 4px;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 "Helvetica Neue", Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 20px;
     text-decoration: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     cursor: pointer;
+    border: 0;
+    padding: 0;
+    color: #fff;
+    vertical-align: middle;
+    white-space: nowrap;
 }
 
-/* Wikidata Q kopyalama */
-.wikidata-button {
-    background-color: #f8f9fa;
-    font-size: 14px;
-    color: black;
-    margin-left: -15px;
+.sb-badge:hover {
+    text-decoration: none;
+    filter: brightness(1.07);
 }
-.copy-button {
-    background-color: transparent;
-    border: 1px solid #d6d6d6;
-    color: #202122;
-}
+.sb-badge:active   { filter: brightness(0.95); }
+.sb-badge[disabled],
+.sb-badge.is-processing { opacity: 0.7; cursor: default; }
 
-/* Renkli aksiyon butonları */
-.ke-button         { background-color: #897e63; color: white !important; }
-.osm-button        { background-color: #7cbd43; color: white !important; }
-.ibb-button        { background-color: #0a75ad; color: white !important; }
-.commons-button    { background-color: #075192; color: white !important; }
-.wsm-button        { background-color: #66ccff; color: white !important; }
-
-/* P373 helper butonları */
-.p373-button       { background-color: #036;    color: white !important; }
-.iw-button         { background-color: #690;    color: white !important; }
-.infobox-button    { background-color: #5cb85c; color: white !important; }
-.duplicity-button  { background-color: #f39c12; color: white !important; }
-
-/* Logo (ikonlu) butonlar */
-.osm-logo-link,
-.gmaps-logo-link,
-.google-earth-logo-link,
-.yandex-logo-link,
-.gsearch-logo-link {
+.sb-badge .sb-label,
+.sb-badge .sb-value {
     display: inline-block;
-    margin-left: 8px;
-    vertical-align: middle;
+    padding: 0 7px;
+    color: #fff;
 }
-.osm-logo-img,
-.gmaps-logo-img,
-.google-earth-logo-img,
-.yandex-logo-img,
-.gsearch-logo-img {
-    width: 18px;
-    height: 18px;
-    vertical-align: middle;
+.sb-badge .sb-label {
+    background-color: #555;
+}
+.sb-badge .sb-value {
+    background-color: #007ec6; /* default — varyantlar override eder */
 }
 
-.button-container a:hover,
-.button-container button:hover {
-    text-decoration: none;
-}
+/* Dinamik durumlar */
+.sb-badge.is-processing .sb-value { background-color: #6c757d !important; }
+.sb-badge.is-success    .sb-value { background-color: #28a745 !important; }
+.sb-badge.is-error      .sb-value { background-color: #dc3545 !important; }
+.sb-badge.is-copied     .sb-value { background-color: #28a745 !important; }
 
-/* === P527 → P361 butonu === */
-.p527-auto-button {
-    margin: 10px 5px;
-    padding: 8px 16px;
-    background-color: #0645ad;
-    color: white;
-    border: 1px solid #0645ad;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 13px;
-    line-height: 1.4;
-}
-.p527-auto-button:hover { background-color: #0a5a9c; }
-.p527-auto-button[disabled] { cursor: default; }
-.p527-button-wrap { margin-top: 5px; }
-.p527-fallback   { background: #f8f9fa; padding: 5px; }
+/* Renk varyantları */
+.sb-ke         .sb-value { background-color: #897e63; }
+.sb-osm        .sb-value { background-color: #7cbd43; }
+.sb-osm-map    .sb-value { background-color: #7cbd43; }
+.sb-ibb        .sb-value { background-color: #0a75ad; }
+.sb-commons    .sb-value { background-color: #075192; }
+.sb-cat-create .sb-value { background-color: #075192; }
+.sb-wlm        .sb-value { background-color: #075192; }
+.sb-wsm        .sb-value { background-color: #66ccff; color: #003049; }
+.sb-p373       .sb-value { background-color: #003366; }
+.sb-iw         .sb-value { background-color: #669900; }
+.sb-infobox    .sb-value { background-color: #5cb85c; }
+.sb-duplicity  .sb-value { background-color: #f39c12; }
+.sb-wikidata   .sb-value { background-color: #339966; }
+.sb-gmaps      .sb-value { background-color: #ea4335; }
+.sb-yandex     .sb-value { background-color: #ffcc00; color: #1a1a1a; }
+.sb-earth      .sb-value { background-color: #4285f4; }
+.sb-gsearch    .sb-value { background-color: #34a853; }
+.sb-copy       .sb-value { background-color: #6c757d; }
+.sb-p527       .sb-value { background-color: #0645ad; }
+.sb-p180       .sb-value { background-color: #0645ad; }
 
-/* === Commons "kategori oluştur" butonu (Wikidata başlığında) === */
-.commons-create-category-button {
-    margin-left: 0.5em;
-}
 
-/* === Commons P180 toplu ekleyici === */
-#p180-add-button {
-    background-color: #0645ad;
-    color: white;
-    border: none;
-    padding: 3px 8px;
-    margin: 0;
-    cursor: pointer;
-    border-radius: 3px;
-    font-size: 12px;
-}
+/* ============================================================ *
+ *  P527 ve P180 yerleşim sarmalayıcıları
+ * ============================================================ */
+
+.p527-button-wrap   { margin-top: 5px; }
+.p180-toolbox-wrap  { margin: 6px 0; }
+
+
+/* ============================================================ *
+ *  Commons P180 toplu ekleyici — ilerleme + dialog
+ * ============================================================ */
 
 .p180-progress,
 .p180-dialog {
@@ -153,10 +135,7 @@
     width: 0%;
     transition: width 0.3s ease;
 }
-.p180-progress-status {
-    font-size: 14px;
-    color: #666;
-}
+.p180-progress-status { font-size: 14px; color: #666; }
 .p180-progress-current {
     font-size: 12px;
     color: #999;
@@ -179,15 +158,8 @@
     line-height: 1.4;
     white-space: pre-line;
 }
-.p180-dialog-message a {
-    color: #0645ad;
-    text-decoration: underline;
-}
-.p180-dialog-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
+.p180-dialog-message a { color: #0645ad; text-decoration: underline; }
+.p180-dialog-buttons   { display: flex; gap: 10px; justify-content: center; }
 .p180-dialog-btn {
     color: white;
     border: none;

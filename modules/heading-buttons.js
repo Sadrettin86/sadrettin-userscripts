@@ -4,84 +4,25 @@
  * Çalıştığı yer: Wikidata item sayfaları + Wikidata bağlantısı olan Wikipedia
  *                makaleleri (wgWikibaseItemId üzerinden tespit).
  *
- * Sayfanın başlığına şu butonları ekler:
- *   - KE (Kültür Envanteri) — P11729 varsa
- *   - İsim ara — Türkçe etiketle KE araması
- *   - Koord. ara — KE haritasında koordinatla arama
- *   - ibb — sadece İstanbul'da bulunan öğeler için (P131 zinciri Q534799'a bağlanırsa)
- *   - OpenStreetMap, Google Maps, Yandex, WikiShootMe (WSM), Google Earth — koordinat varsa
- *   - OSM node / way / relation — P11693 / P10689 / P402 varsa
- *   - WLM — Viki Anıtları Seviyor harita linki
- *   - Google Search — Türkçe etiketle Google araması
- *   - Wikidata Q kopyalama butonu (Wikipedia'da görünür)
+ * Sayfa başlığına shields.io tarzı iki-tonlu rozetler ekler. Her rozet
+ * "label | value" yapısındadır:
+ *
+ *   [KE | aç]      — Kültür Envanteri sayfası (P11729)
+ *   [KE | isim]    — Türkçe etiketle KE araması
+ *   [KE | koord]   — KE haritasında koordinatla arama
+ *   [Harita | İBB] — sadece İstanbul'da bulunan öğeler için
+ *   [Harita | OSM] [Harita | Maps] [Harita | Yandex] [Harita | Earth]
+ *   [Tool | WSM]   — WikiShootMe
+ *   [OSM | node]   [OSM | way]   [OSM | rel]
+ *   [Tool | WLM]   — Viki Anıtları Seviyor
+ *   [Web | Google] — Türkçe etiketle Google araması
+ *   [Wikidata | Q12345] [Q-ID | kopyala] — sadece Wikipedia'da
+ *
+ * Bağımlılık: core.js (SUS.getEntityId, SUS.getHeadingElement,
+ *                      SUS.addBadge, SUS.isLocatedInIstanbulRecursive)
  */
 
 (function () {
-
-    function getEntityId() {
-        var fromWiki = mw.config.get('wgWikibaseItemId');
-        if (fromWiki) return fromWiki;
-        var fromWD = mw.config.get('wgTitle');
-        if (/^Q\d+$/.test(fromWD)) return fromWD;
-        return null;
-    }
-
-    function getHeadingElement() {
-        var $heading = $('#firstHeading');
-        if (!$heading.length) {
-            $heading = $('h1.wikibase-titlepage-heading');
-        }
-        return $heading;
-    }
-
-    function addButton($container, tag, cssClass, text, extraAttrs) {
-        var $el = $('<' + tag + '>')
-            .addClass(cssClass)
-            .text(text);
-
-        if (extraAttrs) {
-            Object.keys(extraAttrs).forEach(function (key) {
-                $el.attr(key, extraAttrs[key]);
-            });
-        }
-        $container.append($el);
-        return $el;
-    }
-
-    function addLogoButton($heading, href, iconUrl, alt, title, linkClass, imgClass) {
-        var $link = $('<a>')
-            .attr({ href: href, target: '_blank', title: title })
-            .addClass(linkClass);
-        var $img = $('<img>')
-            .attr({ src: iconUrl, alt: alt })
-            .addClass(imgClass);
-        $link.append($img);
-        $heading.append($link);
-        return $link;
-    }
-
-    async function isLocatedInIstanbulRecursive(qid, visited) {
-        visited = visited || new Set();
-        if (!qid || visited.has(qid)) return false;
-        visited.add(qid);
-        if (qid === 'Q534799') return true;
-
-        var url = 'https://www.wikidata.org/w/api.php?action=wbgetentities&ids=' +
-            qid + '&props=claims&format=json&origin=*';
-        try {
-            var data = await $.getJSON(url);
-            var claims = data.entities && data.entities[qid] && data.entities[qid].claims && data.entities[qid].claims.P131;
-            if (!claims) return false;
-
-            for (var i = 0; i < claims.length; i++) {
-                var nextQid = claims[i].mainsnak && claims[i].mainsnak.datavalue && claims[i].mainsnak.datavalue.value && claims[i].mainsnak.datavalue.value.id;
-                if (await isLocatedInIstanbulRecursive(nextQid, visited)) return true;
-            }
-        } catch (err) {
-            console.error('İBB zinciri kontrol hatası:', err);
-        }
-        return false;
-    }
 
     function toDMS(deg, isLat) {
         var absolute = Math.abs(deg);
@@ -94,10 +35,16 @@
     }
 
     $(function () {
-        var entityId = getEntityId();
+        var SUS = window.SUS;
+        if (!SUS) {
+            console.error('heading-buttons.js: core.js (window.SUS) yüklenmemiş.');
+            return;
+        }
+
+        var entityId = SUS.getEntityId();
         if (!entityId) return;
 
-        var $heading = getHeadingElement();
+        var $heading = SUS.getHeadingElement();
         if (!$heading.length) return;
 
         var apiUrl = 'https://www.wikidata.org/w/api.php?' +
@@ -119,161 +66,125 @@
             var osmWayId = claims.P10689 ? claims.P10689[0].mainsnak.datavalue.value : null;
             var osmRelationId = claims.P402 ? claims.P402[0].mainsnak.datavalue.value : null;
 
-            var hasKE = (claims.P11729 && claims.P11729.length > 0);
-
-            // KE butonu
-            if (hasKE) {
-                var kulturEnvanteriId = claims.P11729[0].mainsnak.datavalue.value;
-                addButton($heading, 'a', 'ke-button', 'KE', {
-                    href: 'https://kulturenvanteri.com/yer/?p=' + kulturEnvanteriId,
-                    target: '_blank',
+            // KE sayfası (P11729)
+            if (claims.P11729 && claims.P11729.length > 0) {
+                var keId = claims.P11729[0].mainsnak.datavalue.value;
+                SUS.addBadge($heading, {
+                    label: 'KE', value: 'aç', variant: 'ke',
+                    href: 'https://kulturenvanteri.com/yer/?p=' + keId,
                     title: 'Kültür Envanteri sayfasına git'
                 });
             }
 
-            // İsimle KE arama
+            // KE — isimle ara
             if (trLabel) {
-                addButton($heading, 'a', 'ke-button', 'İsim ara', {
+                SUS.addBadge($heading, {
+                    label: 'KE', value: 'isim', variant: 'ke',
                     href: 'https://kulturenvanteri.com/tr/arastir/d/?_ara=' + encodeURIComponent(trLabel),
-                    target: '_blank',
                     title: 'Kültür Envanteri\'nde bu isimle ara'
                 });
             }
 
-            // Koordinatla KE harita
+            // KE — koordinatla ara
             if (lat && lon) {
-                addButton($heading, 'a', 'ke-button', 'Koord. ara', {
+                SUS.addBadge($heading, {
+                    label: 'KE', value: 'koord', variant: 'ke',
                     href: 'https://kulturenvanteri.com/harita/#17.93/' + lat + '/' + lon,
-                    target: '_blank',
                     title: 'Koordinatla Kültür Envanteri haritasında ara'
                 });
             }
 
-            // İBB haritası - sadece İstanbul'da
-            if (lat && lon && claims.P131 && claims.P131[0] && claims.P131[0].mainsnak &&
-                claims.P131[0].mainsnak.datavalue && claims.P131[0].mainsnak.datavalue.value &&
+            // İBB haritası — sadece İstanbul'da
+            if (lat && lon && claims.P131 && claims.P131[0] &&
+                claims.P131[0].mainsnak && claims.P131[0].mainsnak.datavalue &&
+                claims.P131[0].mainsnak.datavalue.value &&
                 claims.P131[0].mainsnak.datavalue.value.id) {
                 var firstP131Qid = claims.P131[0].mainsnak.datavalue.value.id;
-                isLocatedInIstanbulRecursive(firstP131Qid).then(function (result) {
+                SUS.isLocatedInIstanbulRecursive(firstP131Qid).then(function (result) {
                     if (result) {
-                        addButton($heading, 'a', 'ibb-button', 'ibb', {
+                        SUS.addBadge($heading, {
+                            label: 'Harita', value: 'İBB', variant: 'ibb',
                             href: 'https://kulturenvanteri.ibb.gov.tr/portal/apps/webappviewer/index.html?id=62758a0e55e6462e9dbff7d5737e5ed2&marker=' + lon + ',' + lat + ',&level=18',
-                            target: '_blank',
                             title: 'İBB Harita\'da görüntüle'
                         });
                     }
                 });
             }
 
-            // OSM logo
+            // Harita rozetleri (koordinat varsa)
             if (lat && lon) {
-                addLogoButton(
-                    $heading,
-                    'https://www.openstreetmap.org/query?lat=' + lat + '&lon=' + lon + '#map=19/' + lat + '/' + lon,
-                    'https://upload.wikimedia.org/wikipedia/commons/b/b0/Openstreetmap_logo.svg',
-                    'OpenStreetMap',
-                    'OpenStreetMap\'te görüntüle',
-                    'osm-logo-link',
-                    'osm-logo-img'
-                );
-            }
+                SUS.addBadge($heading, {
+                    label: 'Harita', value: 'OSM', variant: 'osm-map',
+                    href: 'https://www.openstreetmap.org/query?lat=' + lat + '&lon=' + lon + '#map=19/' + lat + '/' + lon,
+                    title: 'OpenStreetMap\'te görüntüle'
+                });
 
-            // Google Maps logo
-            if (lat && lon) {
-                addLogoButton(
-                    $heading,
-                    'https://www.google.com/maps/place/' + lat + ',' + lon,
-                    'https://upload.wikimedia.org/wikipedia/commons/3/39/Google_Maps_icon_%282015-2020%29.svg',
-                    'Google Maps',
-                    'Google Maps\'te görüntüle',
-                    'gmaps-logo-link',
-                    'gmaps-logo-img'
-                );
-            }
+                SUS.addBadge($heading, {
+                    label: 'Harita', value: 'Maps', variant: 'gmaps',
+                    href: 'https://www.google.com/maps/place/' + lat + ',' + lon,
+                    title: 'Google Maps\'te görüntüle'
+                });
 
-            // Yandex Street View
-            if (lat && lon) {
-                addLogoButton(
-                    $heading,
-                    'https://yandex.com/maps/11508/istanbul/streetview/?ll=' + lon + '%2C' + lat + '&z=16',
-                    'https://upload.wikimedia.org/wikipedia/commons/7/72/Yandex_Maps_icon.svg',
-                    'Yandex Maps',
-                    'Yandex Sokak Görünümünde görüntüle',
-                    'yandex-logo-link',
-                    'yandex-logo-img'
-                );
-            }
+                SUS.addBadge($heading, {
+                    label: 'Harita', value: 'Yandex', variant: 'yandex',
+                    href: 'https://yandex.com/maps/11508/istanbul/streetview/?ll=' + lon + '%2C' + lat + '&z=16',
+                    title: 'Yandex Sokak Görünümünde görüntüle'
+                });
 
-            // WikiShootMe
-            if (lat && lon) {
-                addButton($heading, 'a', 'wsm-button', 'WSM', {
+                var latDMS = toDMS(lat, true);
+                var lonDMS = toDMS(lon, false);
+                SUS.addBadge($heading, {
+                    label: 'Harita', value: 'Earth', variant: 'earth',
+                    href: 'https://earth.google.com/web/search/' + encodeURIComponent(latDMS + ' ' + lonDMS) +
+                          '/@' + lat + ',' + lon + ',6.80583112a,618.81896101d,35y,0h,0t,0r',
+                    title: 'Google Earth\'te görüntüle'
+                });
+
+                SUS.addBadge($heading, {
+                    label: 'Tool', value: 'WSM', variant: 'wsm',
                     href: 'https://wikishootme.toolforge.org/#lat=' + lat + '&lng=' + lon + '&zoom=18&layers=commons,flickr,geo_json,wikidata_image,wikidata_no_image,wikipedia',
-                    target: '_blank',
                     title: 'WikiShootMe\'de görüntüle'
                 });
             }
 
-            // Google Earth (DMS formatlı)
-            if (lat && lon) {
-                var latDMS = toDMS(lat, true);
-                var lonDMS = toDMS(lon, false);
-                var earthUrl = 'https://earth.google.com/web/search/' +
-                    encodeURIComponent(latDMS + ' ' + lonDMS) +
-                    '/@' + lat + ',' + lon + ',6.80583112a,618.81896101d,35y,0h,0t,0r';
-
-                addLogoButton(
-                    $heading,
-                    earthUrl,
-                    'https://upload.wikimedia.org/wikipedia/commons/e/e4/Google_Earth_icon.svg',
-                    'Google Earth',
-                    'Google Earth\'te görüntüle',
-                    'google-earth-logo-link',
-                    'google-earth-logo-img'
-                );
-            }
-
             // OSM node / way / relation
             if (osmPointId) {
-                addButton($heading, 'a', 'osm-button', 'node', {
+                SUS.addBadge($heading, {
+                    label: 'OSM', value: 'node', variant: 'osm',
                     href: 'https://www.openstreetmap.org/node/' + osmPointId,
-                    target: '_blank',
                     title: 'OSM Node'
                 });
             }
             if (osmWayId) {
-                addButton($heading, 'a', 'osm-button', 'way', {
+                SUS.addBadge($heading, {
+                    label: 'OSM', value: 'way', variant: 'osm',
                     href: 'https://www.openstreetmap.org/way/' + osmWayId,
-                    target: '_blank',
                     title: 'OSM Way'
                 });
             }
             if (osmRelationId) {
-                addButton($heading, 'a', 'osm-button', 'relation', {
+                SUS.addBadge($heading, {
+                    label: 'OSM', value: 'rel', variant: 'osm',
                     href: 'https://www.openstreetmap.org/relation/' + osmRelationId,
-                    target: '_blank',
                     title: 'OSM Relation'
                 });
             }
 
-            // WLM butonu
+            // WLM
             var qidNumberOnly = entityId.replace(/^Q/, '');
-            addButton($heading, 'a', 'commons-button', 'WLM', {
+            SUS.addBadge($heading, {
+                label: 'Tool', value: 'WLM', variant: 'wlm',
                 href: 'https://maps.wikilovesmonuments.org/object/' + qidNumberOnly,
-                target: '_blank',
                 title: 'Viki Anıtları Seviyor'
             });
 
             // Google Search
             if (trLabel) {
-                addLogoButton(
-                    $heading,
-                    'https://www.google.com/search?q=' + encodeURIComponent(trLabel),
-                    'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
-                    'Google Search',
-                    'Google\'da Ara',
-                    'gsearch-logo-link',
-                    'gsearch-logo-img'
-                );
+                SUS.addBadge($heading, {
+                    label: 'Web', value: 'Google', variant: 'gsearch',
+                    href: 'https://www.google.com/search?q=' + encodeURIComponent(trLabel),
+                    title: 'Google\'da Ara'
+                });
             }
         });
 
@@ -282,26 +193,23 @@
             var splitHref = $('#t-wikibase a').attr('href').split('/');
             var qnum = splitHref[splitHref.length - 1];
 
-            var wikidataButton =
-                '<span class="button-container">' +
-                    '<a href="https://www.wikidata.org/wiki/' + qnum + '" target="_blank" class="wikidata-button">' + qnum + '</a>' +
-                    '<button class="copy-button" data-copy="' + qnum + '">Kopyala</button>' +
-                '</span>';
+            SUS.addBadge($heading, {
+                label: 'Wikidata', value: qnum, variant: 'wikidata',
+                href: 'https://www.wikidata.org/wiki/' + qnum,
+                title: 'Wikidata öğesini aç'
+            });
 
-            $heading.append(wikidataButton);
-
-            $(document).on('click', '.copy-button', function () {
-                var textToCopy = $(this).data('copy');
-                var $btn = $(this);
-                navigator.clipboard.writeText(textToCopy).then(function () {
-                    $btn.css({
-                        'background-color': '#e0e0e0',
-                        'border-color': '#d6d6d6',
-                        'color': '#202122'
-                    }).text('Kopyalandı');
-                }).catch(function (err) {
-                    console.error('Kopyalama hatası:', err);
-                });
+            var $copyBadge = SUS.addBadge($heading, {
+                label: 'Q-ID', value: 'kopyala', variant: 'copy',
+                title: 'Q-ID\'yi panoya kopyala',
+                onClick: function () {
+                    var self = this;
+                    navigator.clipboard.writeText(qnum).then(function () {
+                        $(self).addClass('is-copied').find('.sb-value').text('kopyalandı');
+                    }).catch(function (err) {
+                        console.error('Kopyalama hatası:', err);
+                    });
+                }
             });
         }
     });
