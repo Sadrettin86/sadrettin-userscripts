@@ -90,7 +90,21 @@
      * (menüye taşındıysa bile aynı DOM node), böylece sonradan
      * `.find('.sb-value').text(...)` ya da state class güncelleme çalışır.
      */
+    function resolveBadgeContainer($container) {
+        // Başlık (h1) verilirse, başlığın hemen altında bir bar oluştur/bul
+        if ($container.is('h1')) {
+            var $bar = $container.nextAll('.sus-badge-bar').first();
+            if (!$bar.length) {
+                $bar = $('<div class="sus-badge-bar">');
+                $container.after($bar);
+            }
+            return $bar;
+        }
+        return $container;
+    }
+
     SUS.addBadge = function ($container, opts) {
+        $container = resolveBadgeContainer($container);
         var $badge = buildBadgeElement(opts);
         var label = opts.label;
         var $existing = $container.children('[data-sb-label="' + escapeAttr(label) + '"]').first();

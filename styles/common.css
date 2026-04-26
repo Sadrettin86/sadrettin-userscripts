@@ -86,6 +86,23 @@
 
 
 /* ============================================================ *
+ *  Başlık altındaki rozet bar'ı
+ * ============================================================ */
+
+.sus-badge-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 12px;
+    align-items: center;
+}
+.sus-badge-bar .sb-badge,
+.sus-badge-bar .sb-dropdown-wrap {
+    margin-left: 0;
+}
+
+
+/* ============================================================ *
  *  Dropdown grubu (aynı label'lı rozetler otomatik gruplanır)
  * ============================================================ */
 
