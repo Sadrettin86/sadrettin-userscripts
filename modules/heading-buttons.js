@@ -197,30 +197,28 @@
             }
         });
 
-        // Wikidata Q kopyalama (Wikipedia tarafında görünür)
+        // Wikipedia tarafında: Wikidata öğesine git rozeti
         if ($('#t-wikibase').length === 1) {
-            var splitHref = $('#t-wikibase a').attr('href').split('/');
-            var qnum = splitHref[splitHref.length - 1];
-
             SUS.addBadge($heading, {
-                label: 'Wikidata', value: qnum, variant: 'wikidata',
-                href: 'https://www.wikidata.org/wiki/' + qnum,
+                label: 'Wikidata', value: entityId, variant: 'wikidata',
+                href: 'https://www.wikidata.org/wiki/' + entityId,
                 title: 'Wikidata öğesini aç'
             });
-
-            var $copyBadge = SUS.addBadge($heading, {
-                label: 'Q-ID', value: 'kopyala', variant: 'copy',
-                title: 'Q-ID\'yi panoya kopyala',
-                onClick: function () {
-                    var self = this;
-                    navigator.clipboard.writeText(qnum).then(function () {
-                        $(self).addClass('is-copied').find('.sb-value').text('kopyalandı');
-                    }).catch(function (err) {
-                        console.error('Kopyalama hatası:', err);
-                    });
-                }
-            });
         }
+
+        // Q-ID kopyala (hem Wikidata hem Wikipedia)
+        SUS.addBadge($heading, {
+            label: 'Q-ID', value: 'kopyala', variant: 'copy',
+            title: 'Q-ID\'yi panoya kopyala',
+            onClick: function () {
+                var self = this;
+                navigator.clipboard.writeText(entityId).then(function () {
+                    $(self).addClass('is-copied').find('.sb-value').text('kopyalandı');
+                }).catch(function (err) {
+                    console.error('Kopyalama hatası:', err);
+                });
+            }
+        });
     });
 
 })();
