@@ -70,9 +70,19 @@
             if (claims.P11729 && claims.P11729.length > 0) {
                 var keId = claims.P11729[0].mainsnak.datavalue.value;
                 SUS.addBadge($heading, {
-                    label: 'KE', value: 'aç', variant: 'ke',
+                    label: 'KE', value: 'KE aç', variant: 'ke',
                     href: 'https://kulturenvanteri.com/yer/?p=' + keId,
                     title: 'Kültür Envanteri sayfasına git'
+                });
+            }
+
+            // Foto Atlas (P14214)
+            if (claims.P14214 && claims.P14214.length > 0) {
+                var fotoAtlasId = claims.P14214[0].mainsnak.datavalue.value;
+                SUS.addBadge($heading, {
+                    label: 'KE', value: 'Foto Atlas aç', variant: 'ke',
+                    href: 'https://fotoatlas.net/?t=' + encodeURIComponent(fotoAtlasId),
+                    title: 'Foto Atlas sayfasına git'
                 });
             }
 
