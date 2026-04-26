@@ -26,9 +26,8 @@ mw.loader.using(['mediawiki.api', 'mediawiki.ForeignApi'], function () {
     var qid = mw.config.get('wbEntityId');
     if (!qid) return;
 
-    var hasCommonsLink = document.querySelector('#sitelinks a[href^="https://commons.wikimedia.org/wiki/Category:"]');
-    var hasP373 = document.querySelector('.wikibase-statementgroup[data-property-id="P373"]');
-    if (hasCommonsLink && hasP373) return;
+    var hasCommonsLink = !!document.querySelector('#sitelinks a[href^="https://commons.wikimedia.org/wiki/Category:"]');
+    var hasP373 = !!document.querySelector('.wikibase-statementgroup[data-property-id="P373"]');
 
     var $heading = SUS.getHeadingElement();
     if (!$heading.length) return;
@@ -36,7 +35,19 @@ mw.loader.using(['mediawiki.api', 'mediawiki.ForeignApi'], function () {
     var $badge = SUS.addBadge($heading, {
         label: 'Commons', value: '+kategori', variant: 'cat-create',
         title: 'Commons kategorisi oluştur, sitelink ekle ve P373 set et',
-        onClick: function () { run($(this)); }
+        onClick: function () {
+            if (hasCommonsLink || hasP373) {
+                var existing = [];
+                if (hasCommonsLink) existing.push('Commons sitelink');
+                if (hasP373) existing.push('P373');
+                var ok = window.confirm(
+                    'Bu öğede zaten ' + existing.join(' ve ') + ' mevcut.\n' +
+                    'Yine de yeni bir kategori oluşturulsun mu?'
+                );
+                if (!ok) return;
+            }
+            run($(this));
+        }
     });
 
     function setStatus($b, text) { $b.find('.sb-value').text(text); }
