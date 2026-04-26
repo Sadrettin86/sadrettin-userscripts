@@ -14,6 +14,7 @@ sayfasına git, yeni bir bot password yarat. Asgari yetkiler:
 - ✅ **High-volume editing**
 - ✅ **Edit existing pages**
 - ✅ **Create, edit, and move pages**
+- ✅ **Edit your user CSS/JavaScript** ← .js / .css sayfaları için zorunlu
 
 Üretilen `<kullanıcı>@<bot-adı>` ve hex-string parolasını sakla.
 
@@ -88,3 +89,7 @@ yüklenir.
 
 **Sayfa düzenleme reddediliyor** — bot password'a "Edit existing pages"
 yetkisi verilmemiş.
+
+**`mycustomjsprotected`** — bot password'a **"Edit your user
+CSS/JavaScript"** yetkisi verilmemiş. .js / .css sayfaları için bu
+ayrı bir grant'tır; eklemeden deploy çalışmaz.

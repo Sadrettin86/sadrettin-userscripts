@@ -52,7 +52,7 @@
      *   $badge.find('.sb-value').text('...')  ya da
      *   $badge.toggleClass('is-processing is-success is-error')  kullanın.
      */
-    SUS.addBadge = function ($container, opts) {
+    function buildBadgeElement(opts) {
         var hasHref = !!opts.href;
         var $badge = $(hasHref ? '<a>' : '<button type="button">')
             .addClass('sb-badge sb-' + opts.variant);
@@ -76,10 +76,74 @@
                 opts.onClick.call(this, e);
             });
         }
+        return $badge;
+    }
 
-        $container.append($badge);
+    function escapeAttr(s) { return String(s).replace(/(["\\])/g, '\\$1'); }
+
+    /**
+     * Aynı label ile birden fazla rozet eklenince otomatik olarak dropdown
+     * grubuna dönüştürür. İlk çağrı normal rozet, ikinci çağrı dropdown'a
+     * upgrade eder ve her ikisini menüye taşır.
+     *
+     * Çağıran tarafa döndürülen jQuery elemanı her zaman rozetin kendisidir
+     * (menüye taşındıysa bile aynı DOM node), böylece sonradan
+     * `.find('.sb-value').text(...)` ya da state class güncelleme çalışır.
+     */
+    SUS.addBadge = function ($container, opts) {
+        var $badge = buildBadgeElement(opts);
+        var label = opts.label;
+        var $existing = $container.children('[data-sb-label="' + escapeAttr(label) + '"]').first();
+
+        if ($existing.length === 0) {
+            $badge.attr('data-sb-label', label);
+            $container.append($badge);
+            return $badge;
+        }
+
+        var $wrap;
+        if ($existing.hasClass('sb-dropdown-wrap')) {
+            $wrap = $existing;
+            $wrap.find('.sb-menu').append($badge);
+        } else {
+            // existing single rozeti dropdown'a yükselt
+            var existingVariant = '';
+            ($existing.attr('class') || '').split(/\s+/).forEach(function (c) {
+                if (c.indexOf('sb-') === 0 && c !== 'sb-badge') existingVariant = c;
+            });
+
+            var $trigger = $('<button type="button" class="sb-badge sb-dropdown-trigger">')
+                .addClass(existingVariant)
+                .attr('title', label + ' menüsü')
+                .append($('<span class="sb-label">').text(label))
+                .append($('<span class="sb-value sb-caret">').text('▾'));
+
+            var $menu = $('<div class="sb-menu">');
+            $wrap = $('<span class="sb-dropdown-wrap">')
+                .attr('data-sb-label', label)
+                .append($trigger).append($menu);
+
+            $existing.removeAttr('data-sb-label');
+            $existing.replaceWith($wrap);
+            $menu.append($existing).append($badge);
+
+            $trigger.on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('.sb-dropdown-wrap.is-open').not($wrap).removeClass('is-open');
+                $wrap.toggleClass('is-open');
+            });
+        }
         return $badge;
     };
+
+    // Dış tıklamada açık menüleri kapat (bir kere bağla)
+    if (!SUS._dropdownBound) {
+        SUS._dropdownBound = true;
+        $(document).on('click.sus-dropdown', function () {
+            $('.sb-dropdown-wrap.is-open').removeClass('is-open');
+        });
+    }
 
     SUS.isLocatedInIstanbulRecursive = async function (qid, visited) {
         visited = visited || new Set();

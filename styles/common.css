@@ -86,6 +86,54 @@
 
 
 /* ============================================================ *
+ *  Dropdown grubu (aynı label'lı rozetler otomatik gruplanır)
+ * ============================================================ */
+
+.sb-dropdown-wrap {
+    position: relative;
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.sb-dropdown-wrap .sb-badge { margin-left: 0; }
+
+.sb-dropdown-trigger .sb-caret {
+    padding: 0 6px;
+    font-size: 9px;
+}
+
+.sb-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 3px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 120px;
+    padding: 5px;
+    flex-direction: column;
+    gap: 4px;
+}
+.sb-dropdown-wrap.is-open .sb-menu { display: flex; }
+
+.sb-menu .sb-badge {
+    margin-left: 0;
+    box-shadow: none;
+}
+.sb-menu .sb-badge .sb-label { display: none; }
+.sb-menu .sb-badge .sb-value {
+    border-radius: 4px;
+    padding: 0 10px;
+    width: 100%;
+    text-align: center;
+}
+
+
+/* ============================================================ *
  *  P527 ve P180 yerleşim sarmalayıcıları
  * ============================================================ */
 
