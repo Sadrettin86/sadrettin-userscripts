@@ -170,11 +170,10 @@
                 });
             }
 
-            // WLM
-            var qidNumberOnly = entityId.replace(/^Q/, '');
+            // VAS (Viki Anıtları Seviyor)
             SUS.addBadge($heading, {
-                label: 'Tool', value: 'WLM', variant: 'wlm',
-                href: 'https://maps.wikilovesmonuments.org/object/' + qidNumberOnly,
+                label: 'Tool', value: 'VAS', variant: 'wlm',
+                href: 'https://vikianitlariseviyor.tr/monuments/' + entityId,
                 title: 'Viki Anıtları Seviyor'
             });
 

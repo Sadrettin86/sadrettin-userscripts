@@ -7,6 +7,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 API="https://meta.wikimedia.org/w/api.php"
 USER_PREFIX="User:Sadrettin"
+UA="sadrettin-userscripts-deploy/1.0 (https://github.com/Sadrettin86/sadrettin-userscripts; ademozcna@gmail.com)"
 
 if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq is required (brew install jq)" >&2
@@ -44,11 +45,11 @@ trap 'rm -f "$COOKIES"' EXIT
 
 echo "→ Logging in as $MEDIAWIKI_USER"
 
-LOGIN_TOKEN="$(curl -sS -c "$COOKIES" -b "$COOKIES" \
+LOGIN_TOKEN="$(curl -sS -A "$UA" -c "$COOKIES" -b "$COOKIES" \
     "$API?action=query&meta=tokens&type=login&format=json" \
     | jq -r '.query.tokens.logintoken')"
 
-LOGIN_RESULT="$(curl -sS -c "$COOKIES" -b "$COOKIES" -X POST "$API" \
+LOGIN_RESULT="$(curl -sS -A "$UA" -c "$COOKIES" -b "$COOKIES" -X POST "$API" \
     --data-urlencode "action=login" \
     --data-urlencode "lgname=$MEDIAWIKI_USER" \
     --data-urlencode "lgpassword=$MEDIAWIKI_PASSWORD" \
@@ -61,7 +62,7 @@ if [[ "$LOGIN_RESULT" != "Success" ]]; then
     exit 1
 fi
 
-CSRF_TOKEN="$(curl -sS -c "$COOKIES" -b "$COOKIES" \
+CSRF_TOKEN="$(curl -sS -A "$UA" -c "$COOKIES" -b "$COOKIES" \
     "$API?action=query&meta=tokens&type=csrf&format=json" \
     | jq -r '.query.tokens.csrftoken')"
 
@@ -90,7 +91,7 @@ for entry in "${TARGETS[@]}"; do
         continue
     fi
 
-    response="$(curl -sS -c "$COOKIES" -b "$COOKIES" -X POST "$API" \
+    response="$(curl -sS -A "$UA" -c "$COOKIES" -b "$COOKIES" -X POST "$API" \
         --data-urlencode "action=edit" \
         --data-urlencode "title=$page_title" \
         --data-urlencode "text@$src_path" \
@@ -99,8 +100,15 @@ for entry in "${TARGETS[@]}"; do
         --data-urlencode "format=json" \
         --data-urlencode "bot=1")"
 
-    result="$(echo "$response" | jq -r '.edit.result // empty')"
-    error="$(echo "$response" | jq -r '.error.code // empty')"
+    result="$(echo "$response" | jq -r '.edit.result // empty' 2>/dev/null || true)"
+    error="$(echo "$response" | jq -r '.error.code // empty' 2>/dev/null || true)"
+
+    if [[ -z "$result" && -z "$error" ]]; then
+        echo "✗ $page_title  (malformed response)"
+        echo "    $response" >&2
+        FAILED=$((FAILED+1))
+        continue
+    fi
 
     if [[ "$result" == "Success" ]]; then
         nochange="$(echo "$response" | jq -r '.edit.nochange // empty')"
