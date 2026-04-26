@@ -95,6 +95,9 @@
     gap: 6px;
     margin: 8px 0 12px;
     align-items: center;
+    width: 100%;
+    flex-basis: 100%;
+    clear: both;
 }
 .sus-badge-bar .sb-badge,
 .sus-badge-bar .sb-dropdown-wrap {

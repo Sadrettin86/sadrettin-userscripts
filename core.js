@@ -93,10 +93,18 @@
     function resolveBadgeContainer($container) {
         // Başlık (h1) verilirse, başlığın hemen altında bir bar oluştur/bul
         if ($container.is('h1')) {
-            var $bar = $container.nextAll('.sus-badge-bar').first();
+            // Wikidata Vector 2022'de h1 bir flex sarmalayıcı içinde — onun
+            // dışına çık ki bar tam satıra düşsün.
+            var $anchor = $container.closest(
+                '.wikibase-title, .wikibase-entitytermsview, #firstHeading, ' +
+                '.mw-page-title-main, .mw-body-header, h1'
+            ).last();
+            if (!$anchor.length) $anchor = $container;
+
+            var $bar = $anchor.next('.sus-badge-bar');
             if (!$bar.length) {
                 $bar = $('<div class="sus-badge-bar">');
-                $container.after($bar);
+                $anchor.after($bar);
             }
             return $bar;
         }
