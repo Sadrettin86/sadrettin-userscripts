@@ -91,14 +91,12 @@
      * `.find('.sb-value').text(...)` ya da state class güncelleme çalışır.
      */
     function resolveBadgeContainer($container) {
-        // Başlık (h1) verilirse, başlığın hemen altında bir bar oluştur/bul
+        // Başlık (h1) verilirse, başlık bloğunun (header / titlebar) DIŞINA
+        // tam genişlikte bir bar yerleştir.
         if ($container.is('h1')) {
-            // Wikidata Vector 2022'de h1 bir flex sarmalayıcı içinde — onun
-            // dışına çık ki bar tam satıra düşsün.
             var $anchor = $container.closest(
-                '.wikibase-title, .wikibase-entitytermsview, #firstHeading, ' +
-                '.mw-page-title-main, .mw-body-header, h1'
-            ).last();
+                '.mw-body-header, .vector-page-titlebar, header.mw-body-header'
+            );
             if (!$anchor.length) $anchor = $container;
 
             var $bar = $anchor.next('.sus-badge-bar');
